@@ -422,7 +422,18 @@ class ChatterboxTTSNode:
                 waveform = reference_audio["waveform"]
                 if waveform.dim() == 3:
                     waveform = waveform.squeeze(0)
-                torchaudio.save(tmp_file.name, waveform, reference_audio["sample_rate"])
+                import soundfile as sf
+
+                audio = waveform.detach().cpu().numpy().squeeze()
+
+                if audio.ndim == 2 and audio.shape[0] in [1, 2]:
+                   audio = audio.T
+
+                   sf.write(
+                   tmp_file.name,
+                   audio,
+                   reference_audio["sample_rate"]
+                )
                 audio_prompt = tmp_file.name
         elif audio_prompt_path and os.path.exists(audio_prompt_path):
             audio_prompt = audio_prompt_path
