@@ -12,6 +12,18 @@ import os
 import tempfile
 import re
 from typing import List
+import soundfile as sf
+
+
+def _save_wav(path, waveform, sample_rate):
+    """Save a [channels, samples] tensor to WAV with soundfile.
+    Replaces torchaudio.save, which needs TorchCodec in torchaudio >= 2.9."""
+    wav = waveform.detach().cpu().float()
+    while wav.dim() > 2:  # drop batch dimension(s) if present
+        wav = wav[0]
+    if wav.dim() == 1:
+        wav = wav.unsqueeze(0)
+    sf.write(path, wav.numpy().T, int(sample_rate))  # (channels, samples) -> (samples, channels)
 
 # Get the current node directory for bundled resources
 NODE_DIR = os.path.dirname(__file__)
@@ -575,14 +587,14 @@ class ChatterboxVCNode:
             source_waveform = source_audio["waveform"]
             if source_waveform.dim() == 3:
                 source_waveform = source_waveform.squeeze(0)  # Remove batch dimension if present
-            torchaudio.save(source_tmp.name, source_waveform, source_audio["sample_rate"])
+            _save_wav(source_tmp.name, source_waveform, source_audio["sample_rate"])
             source_path = source_tmp.name
 
         with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as target_tmp:
             target_waveform = target_audio["waveform"]
             if target_waveform.dim() == 3:
                 target_waveform = target_waveform.squeeze(0)  # Remove batch dimension if present
-            torchaudio.save(target_tmp.name, target_waveform, target_audio["sample_rate"])
+            _save_wav(target_tmp.name, target_waveform, target_audio["sample_rate"])
             target_path = target_tmp.name
 
         try:
