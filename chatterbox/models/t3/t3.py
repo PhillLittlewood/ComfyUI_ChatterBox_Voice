@@ -48,7 +48,12 @@ class T3(nn.Module):
         super().__init__()
         self.hp = hp
         self.cfg = LlamaConfig(**LLAMA_CONFIGS[hp.llama_config_name])
+        # The AlignmentStreamAnalyzer hooks the attention layers and reads attention
+        # weights, which newer transformers' default `sdpa` backend does not return.
+        # Force eager attention (must be set before the model is built).
+        self.cfg._attn_implementation = "eager"
         self.tfmr = LlamaModel(self.cfg)
+        self.tfmr.config._attn_implementation = "eager"
         self.dim = self.cfg.hidden_size
         self.deepspeed_patch_applied = False
 

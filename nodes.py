@@ -418,23 +418,26 @@ class ChatterboxTTSNode:
         # Handle reference audio input
         audio_prompt = None
         if reference_audio is not None:
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
-                waveform = reference_audio["waveform"]
-                if waveform.dim() == 3:
-                    waveform = waveform.squeeze(0)
-                import soundfile as sf
+            import soundfile as sf
 
-                audio = waveform.detach().cpu().numpy().squeeze()
+            waveform = reference_audio["waveform"]
+            if waveform.dim() == 3:
+                waveform = waveform[0]            # [channels, samples]
 
-                if audio.ndim == 2 and audio.shape[0] in [1, 2]:
-                   audio = audio.T
+            audio = waveform.detach().cpu().float().numpy()
+            if audio.ndim == 2:
+                if audio.shape[0] == 1:
+                    audio = audio[0]              # mono -> 1-D
+                else:
+                    audio = audio.T               # [samples, channels]
 
-                   sf.write(
-                   tmp_file.name,
-                   audio,
-                   reference_audio["sample_rate"]
-                )
-                audio_prompt = tmp_file.name
+            if audio.size == 0:
+                raise ValueError("Reference audio is empty")
+
+            tmp_file = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+            tmp_file.close()                      # release handle before writing (Windows)
+            sf.write(tmp_file.name, audio, reference_audio["sample_rate"])
+            audio_prompt = tmp_file.name
         elif audio_prompt_path and os.path.exists(audio_prompt_path):
             audio_prompt = audio_prompt_path
 

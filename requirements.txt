@@ -6,7 +6,7 @@ librosa
 omegaconf
 accelerate
 librosa
-numpy<=2.3.1
+numpy
 einops
 scipy
 tokenizers
